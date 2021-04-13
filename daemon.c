@@ -37,16 +37,13 @@ static void signal_handler(int signo)
 
 static void signal_handler_controller(int signo)
 {
-	if (advanced)
-		syslog(LOG_NOTICE, "Odebrano sygnal %d", signo);
-	
 	if (signo == SIGUSR1)
 	{
-		longjmp(jump, 0);
+		kill(-1, signo);
 	}
 	else if (signo == SIGUSR2)
 	{
-		longjmp(jump, 1);
+		kill(-1, signo);
 	}
 	else
 	{
@@ -65,6 +62,15 @@ void printdir(char *dir, char *s)
 	if ((dp = opendir(dir)) == NULL)
 	{
 		//fprintf(stderr, "cant %s", dir);
+		syslog(LOG_NOTICE, "cant %s", dir);
+		return;
+	}
+	syslog(LOG_NOTICE, "can %s", dir);
+	close(dp);
+	if ((dp = opendir(dir)) == NULL)
+	{
+		//fprintf(stderr, "cant %s", dir);
+		syslog(LOG_NOTICE, "cant %s", dir);
 		return;
 	}
 	
@@ -112,7 +118,7 @@ int main(int argc, char **argv)
 	
 	int sleep_time = 60;
 	int arguments = 0;
-	int forks = 1;
+	int forks = 0;
 	
 	if (argc - arguments >= 3 && strstr(argv[1 + arguments], "-f") != NULL)
 	{
@@ -131,16 +137,26 @@ int main(int argc, char **argv)
 		advanced = 1;
 		arguments += 1;
 	}
-	int f = 1, i;
-	for (i = 0; i < forks; i++)
-		if (f != 0)
+	int f = 0;
+	if (forks != 0)
+	{
+		int i;
+		f = 1;
+		for (i = 0; i < forks; i++)
 		{
-			f = fork();
-			setpgid(f, 0);
+			if (f != 0)
+			{
+				f = fork();
+			}
 		}
-	
-	void (*fun_sig_han)(int) = &signal_handler;
-	
+	}
+	void (*fun_sig_han)(int);
+	if (f == 0)
+		fun_sig_han = &signal_handler;
+	else
+		fun_sig_han = &signal_handler_controller;
+		
+		
 	if (signal (SIGUSR1, *fun_sig_han) == SIG_ERR)
 	{
 		fprintf(stderr, "Nie mozna obsluzyc sygnalu SIGUSR1!");
@@ -153,20 +169,28 @@ int main(int argc, char **argv)
 	}
 	
 	
-	openlog("test", LOG_PID, LOG_DAEMON);
-	while(1)
+	if (f == 0)
 	{
-		if (setjmp(jump) == 0)
+		openlog("test", LOG_PID, LOG_DAEMON);
+		while(1)
 		{
+			if (setjmp(jump) == 0)
+			{
+				if (advanced)
+					syslog(LOG_NOTICE, "Obudzenie sie %s", argv[1 + arguments]);
+				printdir("/", argv[1 + arguments]);
+			}
 			if (advanced)
-				syslog(LOG_NOTICE, "Obudzenie sie");
-			printdir("/", argv[1 + arguments]);
+				syslog(LOG_NOTICE, "Uspienie sie");
+			sleep(sleep_time);
 		}
-		if (advanced)
-			syslog(LOG_NOTICE, "Uspienie sie");
-		sleep(sleep_time);
+		
+		closelog();
+	}
+	else
+	{
+		while(1);
 	}
 	
-	closelog();
 	return EXIT_SUCCESS;
 }
