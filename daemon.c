@@ -5,28 +5,52 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <syslog.h>
+#include <setjmp.h>
 
 #include <string.h>
 #include <dirent.h>
 
+jmp_buf jump;
+
 int advanced = 0;
-int sleep_time = 0;
 
 static void signal_handler(int signo)
 {
+	if (advanced)
+		syslog(LOG_NOTICE, "Odebrano sygnal %d", signo);
+	
 	if (signo == SIGUSR1)
 	{
-		//continue;
-		printf("SIGNUSR1");
+		longjmp(jump, 0);
 	}
 	else if (signo == SIGUSR2)
 	{
-		sleep(sleep_time);
-		printf("SIGNUSR2");
+		longjmp(jump, 1);
 	}
 	else
 	{
-		fprintf(stderr, "Nieoczekiwany sygnal!\n");
+		syslog(LOG_NOTICE, "Nieoczekiwany sygnal!");
+		exit (EXIT_FAILURE);
+	}
+	exit (EXIT_SUCCESS);
+}
+
+static void signal_handler_controller(int signo)
+{
+	if (advanced)
+		syslog(LOG_NOTICE, "Odebrano sygnal %d", signo);
+	
+	if (signo == SIGUSR1)
+	{
+		longjmp(jump, 0);
+	}
+	else if (signo == SIGUSR2)
+	{
+		longjmp(jump, 1);
+	}
+	else
+	{
+		syslog(LOG_NOTICE, "Nieoczekiwany sygnal!");
 		exit (EXIT_FAILURE);
 	}
 	exit (EXIT_SUCCESS);
@@ -47,6 +71,8 @@ void printdir(char *dir, char *s)
 	chdir(dir);
 	while ((entry = readdir(dp)) != NULL) 
 	{
+		if (advanced)
+			syslog(LOG_NOTICE, "Obsluzenie pliku/folderu %s", entry->d_name);
 		lstat(entry->d_name, &statbuf);
 		if (S_ISDIR(statbuf.st_mode))
 		{
@@ -54,7 +80,7 @@ void printdir(char *dir, char *s)
 				continue;
 			
 			//printf("Folder: %s \n", entry->d_name);
-			syslog(LOG_NOTICE, "Folder: %s \n", entry->d_name);
+			//syslog(LOG_NOTICE, "Folder: %s \n", entry->d_name);
 			printdir(entry->d_name, s);
 		}
 		else
@@ -72,67 +98,75 @@ void printdir(char *dir, char *s)
 
 int main(int argc, char **argv)
 {
+	if (argc < 2)
+	{
+		printdir("/", "bc");
+		return 0;
+	}
 
-		
 	int d = daemon(0, 0);
 	if (d < 0)
-	{
-		
+		printf("ERROR");
 	
-		
-		printf("NO");
+	
+	
+	int sleep_time = 60;
+	int arguments = 0;
+	int forks = 1;
+	
+	if (argc - arguments >= 3 && strstr(argv[1 + arguments], "-f") != NULL)
+	{
+		forks = atoi(argv[2 + arguments]);
+		arguments += 2;
 	}
 	
-	if (signal (SIGUSR1, signal_handler) == SIG_ERR)
+	if (argc - arguments >= 3 && strstr(argv[1 + arguments], "-t") != NULL)
+	{
+		sleep_time = atoi(argv[2 + arguments]);
+		arguments += 2;
+	}
+	
+	if (argc - arguments >= 2 && strstr(argv[1 + arguments], "-v") != NULL)
+	{
+		advanced = 1;
+		arguments += 1;
+	}
+	int f = 1, i;
+	for (i = 0; i < forks; i++)
+		if (f != 0)
+		{
+			f = fork();
+			setpgid(f, 0);
+		}
+	
+	void (*fun_sig_han)(int) = &signal_handler;
+	
+	if (signal (SIGUSR1, *fun_sig_han) == SIG_ERR)
 	{
 		fprintf(stderr, "Nie mozna obsluzyc sygnalu SIGUSR1!");
 		exit (EXIT_FAILURE);
 	}
-	if (signal (SIGUSR2, signal_handler) == SIG_ERR)
+	if (signal (SIGUSR2, *fun_sig_han) == SIG_ERR)
 	{
 		fprintf(stderr, "Nie mozna obsluzyc sygnalu SIGUSR2!");
 		exit (EXIT_FAILURE);
 	}
 	
+	
 	openlog("test", LOG_PID, LOG_DAEMON);
-	
-	
-	/*
-	syslog(LOG_NOTICE, "T1");
-	sleep(20);
-	syslog(LOG_NOTICE, "T2");
-	*/
-	
 	while(1)
 	{
-		if (argc < 2)
-			printdir("/", "bc");
-		else
+		if (setjmp(jump) == 0)
 		{
-			int arguments = 0;
-			
-			if (argv[1 + arguments] == "-v")
-			{
-				advanced = 1;
-				arguments += 1;
-			}
-			else
-				advanced = 2;
-			
-			if (argv[1 + arguments] == "-t")
-			{
-				sleep_time = atoi(argv[2 + arguments]);
-				arguments += 2;
-			}
-			else
-				sleep_time = 1000;
-			
-			
+			if (advanced)
+				syslog(LOG_NOTICE, "Obudzenie sie");
 			printdir("/", argv[1 + arguments]);
 		}
+		if (advanced)
+			syslog(LOG_NOTICE, "Uspienie sie");
+		sleep(sleep_time);
 	}
 	
 	closelog();
 	return EXIT_SUCCESS;
-	return 0;
 }
