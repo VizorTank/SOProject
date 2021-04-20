@@ -53,6 +53,52 @@ static void signal_handler_controller(int signo)
 	exit (EXIT_SUCCESS);
 }
 
+char* concat(const char *s1, const char *s2)
+{
+	char *result = malloc(strlen(s1) + strlen(s2) + 1);
+	strcpy(result, s1);
+	strcat(result, s2);
+	return result;
+}
+
+void find_files(const char *path, const char *file)
+{
+	struct dirent *entry;
+	struct stat statbuf;
+	int ret = 1;
+	DIR *dir;
+	
+	if ((dir = opendir(path)) == NULL)
+	{
+		syslog(LOG_NOTICE, "cant open %s", path);
+		return;
+	}
+	
+	while ((entry = readdir(dir)) != NULL)
+	{
+		if (advanced)
+			syslog(LOG_NOTICE, "Obsluzenie pliku/folderu %s", entry->d_name);
+		
+		lstat(entry->d_name, &statbuf);
+		if (S_ISDIR(statbuf.st_mode))
+		{
+			if (strcmp(".", entry->d_name) == 0 || strcmp("..", entry->d_name) == 0)
+				continue;
+			
+			//syslog(LOG_NOTICE, "Folder: %s \n", entry->d_name);
+			find_files(concat(path, entry->d_name), file);
+		}
+		else
+		{
+			if (strstr(entry->d_name, file) != NULL)
+				syslog(LOG_NOTICE, "Plik: %s Wzorzec: %s\n", entry->d_name, file);
+		}
+	}
+	
+	closedir(dir);
+	return;
+}
+
 void printdir(char *dir, char *s)
 {
 	DIR *dp;
@@ -171,14 +217,14 @@ int main(int argc, char **argv)
 	
 	if (f == 0)
 	{
-		openlog("test", LOG_PID, LOG_DAEMON);
+		openlog("test2", LOG_PID, LOG_DAEMON);
 		while(1)
 		{
 			if (setjmp(jump) == 0)
 			{
 				if (advanced)
 					syslog(LOG_NOTICE, "Obudzenie sie %s", argv[1 + arguments]);
-				printdir("/", argv[1 + arguments]);
+				find_files("/", argv[1 + arguments]);
 			}
 			if (advanced)
 				syslog(LOG_NOTICE, "Uspienie sie");
