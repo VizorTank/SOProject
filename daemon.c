@@ -117,31 +117,19 @@ int main(int argc, char **argv)
 	int sleep_time = 6000000;
 	int arguments = 0;
 	int forks = 0;
-	char dir[20] = "/";
-	char log[20] = "Daemon20";
 	int f = 0;
-	
-	if (argc < 2)
-	{
-		/*
-		//advanced = 1;
-		openlog("daemon8", LOG_PID, LOG_DAEMON);
-		find_files("/", ["bc"], argc);
-		closelog();
-		*/
-		printf("ERROR");
-		return 0;
-	}
 
-	// Daemon
-	int d = daemon(0, 0);
+	char *dir = malloc(1);
+	strcpy(dir, "/");
 
-	if (d < 0)
-		printf("ERROR");
+	char *log = malloc(strlen("Daemon21"));
+	strcpy(log, "Daemon21");
 	
 	// Argument handler
 	if (argc - arguments >= 3 && strstr(argv[1 + arguments], "-d") != NULL)
 	{
+		free(dir);
+		dir = malloc(strlen(argv[2 + arguments]));
 		strcpy(dir, argv[2 + arguments]);
 		arguments += 2;
 	}
@@ -154,6 +142,8 @@ int main(int argc, char **argv)
 
 	if (argc - arguments >= 3 && strstr(argv[1 + arguments], "-l") != NULL)
 	{
+		free(log);
+		log = malloc(strlen(argv[2 + arguments]));
 		strcpy(log, argv[2 + arguments]);
 		arguments += 2;
 	}
@@ -170,26 +160,39 @@ int main(int argc, char **argv)
 		arguments += 1;
 	}
 	
+	// Too few arguments
+	if (argc - arguments <= 1)
+	{
+		exit (EXIT_FAILURE);
+	}
+	
+	// Daemon
+	int d = daemon(0, 0);
+	if (d < 0)
+		fprintf(stderr, "ERROR");
 
+	// Forks
 	if (forks != 0)
 	{
 		int i;
 		f = 1;
-		for (i = 0; i < forks; i++)
+		for (i = 0; i <= forks; i++)
 		{
 			if (f != 0)
 			{
 				f = fork();
 			}
+			else
+				break;
 		}
 	}
 	
+	// Signal handlers
 	void (*fun_sig_han)(int);
 	if (f == 0)
 		fun_sig_han = &signal_handler;
 	else
 		fun_sig_han = &signal_handler_controller;
-		
 		
 	if (signal (SIGUSR1, *fun_sig_han) == SIG_ERR)
 	{
@@ -202,7 +205,7 @@ int main(int argc, char **argv)
 		exit (EXIT_FAILURE);
 	}
 	
-	
+	// Program
 	if (f == 0)
 	{
 		openlog(log, LOG_PID, LOG_DAEMON);
@@ -213,18 +216,20 @@ int main(int argc, char **argv)
 			{
 				if (advanced)
 					syslog(LOG_NOTICE, "Obudzenie sie %s", argv[1 + arguments]);
-				find_files("/", argv, 1 + arguments, argc - arguments);
+				
+				find_files(dir, argv, 1 + arguments, argc - arguments);
 			}
-			syslog(LOG_NOTICE, "%d", j);
+
 			if (advanced)
 				syslog(LOG_NOTICE, "Uspienie sie");
+			
 			sleep(sleep_time);
 		}
-		
 		closelog();
 	}
 	else
 	{
+		syslog(LOG_NOTICE, "Controller");
 		while(1);
 	}
 	
