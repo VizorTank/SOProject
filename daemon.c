@@ -116,7 +116,7 @@ int main(int argc, char **argv)
 	
 	if (argc < 2)
 	{
-		openlog("daemon3", LOG_PID, LOG_DAEMON);
+		openlog("daemon5", LOG_PID, LOG_DAEMON);
 		find_files("/", "bc", argc);
 		closelog();
 		return 0;
