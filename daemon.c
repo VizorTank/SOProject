@@ -78,7 +78,7 @@ void find_files(const char *path, const char *file, const int arg)
 	
 	while ((entry = readdir(dir)) != NULL)
 	{
-		if (lstat(entry->d_name, &statbuf))
+		if (lstat(entry->d_name, &statbuf) == -1)
 		{
 			syslog(LOG_NOTICE, "ERROR");
 			continue;
