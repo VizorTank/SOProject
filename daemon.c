@@ -13,9 +13,6 @@
 jmp_buf jump;
 
 int advanced = 0;
-// grep test /var/log/syslog
-// gcc -o daemon daemon.c
-//
 
 static void signal_handler(int signo)
 {
@@ -73,7 +70,7 @@ void find_files(const char *path, const char *file, const int arg)
 	int ret = 1;
 	DIR *dir;
 	
-	if ((dir = opendir(path)) == NULL || strcmp(path, "/dev/fd") == 0)
+	if ((dir = opendir(path)) == NULL)
 	{
 		syslog(LOG_NOTICE, "cant open %s", path);
 		return;
@@ -82,16 +79,16 @@ void find_files(const char *path, const char *file, const int arg)
 	while ((entry = readdir(dir)) != NULL)
 	{
 		if (advanced)
-			syslog(LOG_NOTICE, "Obsluzenie pliku/folderu %s/%s", path, entry->d_name);
+			syslog(LOG_NOTICE, "Obsluzenie pliku/folderu %s  %s", path, entry->d_name);
 		
 		lstat(entry->d_name, &statbuf);
-		if (S_ISLNK(statbuf.st_mode))
+		if (S_ISLNK(statbuf.st_mode) || S_ISSOCK(statbuf.st_mode))
 			continue;
 		
 		if (S_ISDIR(statbuf.st_mode))
 		{
-			if (strcmp(".", entry->d_name) == 0 
-					|| strcmp("..", entry->d_name) == 0)
+			if (!strcmp(".", entry->d_name)
+					|| !strcmp("..", entry->d_name))
 				continue;
 			
 			//syslog(LOG_NOTICE, "Folder: %s \n", entry->d_name);
