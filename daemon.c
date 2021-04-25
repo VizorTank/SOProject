@@ -63,7 +63,7 @@ char* concat(const char *s1, const char *s2)
 	return result;
 }
 
-void find_files(const char *path, const char *file, const int arg)
+void find_files(const char *path, const char **file, const int arg)
 {
 	struct dirent *entry;
 	struct stat statbuf;
@@ -97,9 +97,12 @@ void find_files(const char *path, const char *file, const int arg)
 		{
 			if (advanced)
 				syslog(LOG_NOTICE, "Obsluzenie pliku %s", new_path);
-			
-			if (strstr(entry->d_name, file) != NULL)
-				syslog(LOG_NOTICE, "Path: %s Plik: %s Wzorzec: %s\n", path, entry->d_name, file);
+			int i;
+			for (i = 0; i < arg; i++)
+			{
+				if (strstr(entry->d_name, file[i]) != NULL)
+					syslog(LOG_NOTICE, "Path: %s Plik: %s Wzorzec: %s\n", path, entry->d_name, file[i]);
+			}
 		}
 		free(new_path);
 	}
@@ -187,7 +190,7 @@ int main(int argc, char **argv)
 			{
 				if (advanced)
 					syslog(LOG_NOTICE, "Obudzenie sie %s", argv[1 + arguments]);
-				find_files("/", argv[1 + arguments], argc - arguments);
+				find_files("/", argv + 1 + arguments, argc - arguments);
 			}
 			if (advanced)
 				syslog(LOG_NOTICE, "Uspienie sie");
