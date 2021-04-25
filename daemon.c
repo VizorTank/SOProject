@@ -72,7 +72,8 @@ void find_files(const char *path, const char **file, const int arg)
 	
 	if ((dir = opendir(path)) == NULL)
 	{
-		syslog(LOG_NOTICE, "cant open %s", path);
+		if (advanced)
+			syslog(LOG_NOTICE, "cant open %s", path);
 		return;
 	}
 	
@@ -116,13 +117,14 @@ int main(int argc, char **argv)
 	int sleep_time = 6000000;
 	int arguments = 0;
 	int forks = 0;
+	int f = 0;
 	int d = daemon(0, 0);
 
 	if (d < 0)
 		printf("ERROR");
 	if (argc < 2)
 	{
-		advanced = 1;
+		//advanced = 1;
 		openlog("daemon8", LOG_PID, LOG_DAEMON);
 		find_files("/", "bc", argc);
 		closelog();
@@ -146,7 +148,7 @@ int main(int argc, char **argv)
 		advanced = 1;
 		arguments += 1;
 	}
-	int f = 0;
+	
 	/*
 	if (forks != 0)
 	{
