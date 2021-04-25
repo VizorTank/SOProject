@@ -122,7 +122,7 @@ int main(int argc, char **argv)
 		printf("ERROR");
 	if (argc < 2)
 	{
-		openlog("daemon6", LOG_PID, LOG_DAEMON);
+		openlog("daemon7", LOG_PID, LOG_DAEMON);
 		find_files("/", "bc", argc);
 		closelog();
 		return 0;
