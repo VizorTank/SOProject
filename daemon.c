@@ -183,7 +183,7 @@ int main(int argc, char **argv)
 	
 	if (f == 0)
 	{
-		openlog("daemon3", LOG_PID, LOG_DAEMON);
+		openlog("daemon10", LOG_PID, LOG_DAEMON);
 		while(1)
 		{
 			if (setjmp(jump) == 0)
