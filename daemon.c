@@ -21,11 +21,11 @@ static void signal_handler(int signo)
 	
 	if (signo == SIGUSR1)
 	{
-		longjmp(jump, 2);
+		longjmp(jump, 1);
 	}
 	else if (signo == SIGUSR2)
 	{
-		longjmp(jump, 1);
+		longjmp(jump, 2);
 	}
 	else
 	{
@@ -208,8 +208,8 @@ int main(int argc, char **argv)
 		openlog(log, LOG_PID, LOG_DAEMON);
 		while(1)
 		{
-			int j;
-			if ((j = setjmp(jump)) == 0)
+			int j = setjmp(jump);
+			if (j == 0 || j == 1)
 			{
 				if (advanced)
 					syslog(LOG_NOTICE, "Obudzenie sie %s", argv[1 + arguments]);
