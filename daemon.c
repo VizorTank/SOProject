@@ -63,7 +63,7 @@ char* concat(const char *s1, const char *s2)
 	return result;
 }
 
-void find_files(char *path, char **file, const int arg)
+void find_files(char *path, char **file, const int start, const int arg)
 {
 	struct dirent *entry;
 	struct stat statbuf;
@@ -92,14 +92,14 @@ void find_files(char *path, char **file, const int arg)
 			if (advanced)
 				syslog(LOG_NOTICE, "Obsluzenie folderu %s", new_path);
 			
-			find_files(new_path, file, arg);
+			find_files(new_path, file, start, arg);
 		}
 		else if (S_ISREG(statbuf.st_mode))
 		{
 			if (advanced)
 				syslog(LOG_NOTICE, "Obsluzenie pliku %s", new_path);
 			int i;
-			for (i = 0; i < arg; i++)
+			for (i = start; i < arg; i++)
 			{
 				if (strstr(entry->d_name, file[i]) != NULL)
 					syslog(LOG_NOTICE, "Path: %s Plik: %s Wzorzec: %s\n", path, entry->d_name, file[i]);
@@ -119,7 +119,6 @@ int main(int argc, char **argv)
 	int forks = 0;
 	int f = 0;
 	
-	
 	if (argc < 2)
 	{
 		/*
@@ -128,15 +127,17 @@ int main(int argc, char **argv)
 		find_files("/", ["bc"], argc);
 		closelog();
 		*/
-		printf("END");
+		printf("ERROR");
 		return 0;
 	}
+
+	// Daemon
 	int d = daemon(0, 0);
 
 	if (d < 0)
 		printf("ERROR");
-
-	/*
+	
+	// Argument handler
 	if (argc - arguments >= 3 && strstr(argv[1 + arguments], "-f") != NULL)
 	{
 		forks = atoi(argv[2 + arguments]);
@@ -154,8 +155,8 @@ int main(int argc, char **argv)
 		advanced = 1;
 		arguments += 1;
 	}
-	*/
-	/*
+	
+
 	if (forks != 0)
 	{
 		int i;
@@ -168,7 +169,6 @@ int main(int argc, char **argv)
 			}
 		}
 	}
-	*/
 	
 	void (*fun_sig_han)(int);
 	if (f == 0)
@@ -198,7 +198,7 @@ int main(int argc, char **argv)
 			{
 				if (advanced)
 					syslog(LOG_NOTICE, "Obudzenie sie %s", argv[1 + arguments]);
-				find_files("/", argv + 1 + arguments, argc - arguments);
+				find_files("/", argv, 1 + arguments, argc - arguments);
 			}
 			if (advanced)
 				syslog(LOG_NOTICE, "Uspienie sie");
