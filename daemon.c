@@ -13,6 +13,9 @@
 jmp_buf jump;
 
 int advanced = 0;
+// grep test /var/log/syslog
+// gcc -o daemon daemon.c
+//
 
 static void signal_handler(int signo)
 {
@@ -55,20 +58,22 @@ static void signal_handler_controller(int signo)
 
 char* concat(const char *s1, const char *s2)
 {
-	char *result = malloc(strlen(s1) + strlen(s2) + 1);
+	char *result = malloc(strlen(s1) + strlen(s2) + 2);
 	strcpy(result, s1);
+	if (strcmp(s1, "/") != 0)
+		strcat(result, "/");
 	strcat(result, s2);
 	return result;
 }
 
-void find_files(const char *path, const char *file)
+void find_files(const char *path, const char *file, const int arg)
 {
 	struct dirent *entry;
 	struct stat statbuf;
 	int ret = 1;
 	DIR *dir;
 	
-	if ((dir = opendir(path)) == NULL)
+	if ((dir = opendir(path)) == NULL || strcmp(path, "/dev/fd") == 0)
 	{
 		syslog(LOG_NOTICE, "cant open %s", path);
 		return;
@@ -77,21 +82,28 @@ void find_files(const char *path, const char *file)
 	while ((entry = readdir(dir)) != NULL)
 	{
 		if (advanced)
-			syslog(LOG_NOTICE, "Obsluzenie pliku/folderu %s", entry->d_name);
+			syslog(LOG_NOTICE, "Obsluzenie pliku/folderu %s/%s", path, entry->d_name);
 		
 		lstat(entry->d_name, &statbuf);
+		if (S_ISLNK(statbuf.st_mode))
+			continue;
+		
 		if (S_ISDIR(statbuf.st_mode))
 		{
-			if (strcmp(".", entry->d_name) == 0 || strcmp("..", entry->d_name) == 0)
+			if (strcmp(".", entry->d_name) == 0 
+					|| strcmp("..", entry->d_name) == 0)
 				continue;
 			
 			//syslog(LOG_NOTICE, "Folder: %s \n", entry->d_name);
-			find_files(concat(path, entry->d_name), file);
+			char *new_path = concat(path, entry->d_name);
+			//syslog(LOG_NOTICE, "new path %s", new_path);
+			find_files(new_path, file, arg);
+			free(new_path);
 		}
-		else
+		else if (S_ISREG(statbuf.st_mode))
 		{
 			if (strstr(entry->d_name, file) != NULL)
-				syslog(LOG_NOTICE, "Plik: %s Wzorzec: %s\n", entry->d_name, file);
+				syslog(LOG_NOTICE, "Path: %s Plik: %s Wzorzec: %s\n", path, entry->d_name, file);
 		}
 	}
 	
@@ -99,60 +111,11 @@ void find_files(const char *path, const char *file)
 	return;
 }
 
-void printdir(char *dir, char *s)
-{
-	DIR *dp;
-	struct dirent *entry;
-	struct stat statbuf;
-	
-	if ((dp = opendir(dir)) == NULL)
-	{
-		//fprintf(stderr, "cant %s", dir);
-		syslog(LOG_NOTICE, "cant %s", dir);
-		return;
-	}
-	syslog(LOG_NOTICE, "can %s", dir);
-	close(dp);
-	if ((dp = opendir(dir)) == NULL)
-	{
-		//fprintf(stderr, "cant %s", dir);
-		syslog(LOG_NOTICE, "cant %s", dir);
-		return;
-	}
-	
-	chdir(dir);
-	while ((entry = readdir(dp)) != NULL) 
-	{
-		if (advanced)
-			syslog(LOG_NOTICE, "Obsluzenie pliku/folderu %s", entry->d_name);
-		lstat(entry->d_name, &statbuf);
-		if (S_ISDIR(statbuf.st_mode))
-		{
-			if (strcmp(".", entry->d_name) == 0 || strcmp("..", entry->d_name) == 0)
-				continue;
-			
-			//printf("Folder: %s \n", entry->d_name);
-			//syslog(LOG_NOTICE, "Folder: %s \n", entry->d_name);
-			printdir(entry->d_name, s);
-		}
-		else
-		{
-			if (strstr(entry->d_name, s) != NULL)
-				syslog(LOG_NOTICE, "Plik: %s Wzorzec: %s\n", entry->d_name, s);
-				//printf("Plik: %s \n", entry->d_name);
-		}
-	}
-	chdir("..");
-	close(dp);
-}
-
-
-
 int main(int argc, char **argv)
 {
 	if (argc < 2)
 	{
-		printdir("/", "bc");
+		find_files("/", "bc", argc);
 		return 0;
 	}
 
@@ -162,7 +125,7 @@ int main(int argc, char **argv)
 	
 	
 	
-	int sleep_time = 60;
+	int sleep_time = 6000000;
 	int arguments = 0;
 	int forks = 0;
 	
@@ -184,6 +147,7 @@ int main(int argc, char **argv)
 		arguments += 1;
 	}
 	int f = 0;
+	/*
 	if (forks != 0)
 	{
 		int i;
@@ -196,6 +160,8 @@ int main(int argc, char **argv)
 			}
 		}
 	}
+	*/
+	
 	void (*fun_sig_han)(int);
 	if (f == 0)
 		fun_sig_han = &signal_handler;
@@ -217,14 +183,14 @@ int main(int argc, char **argv)
 	
 	if (f == 0)
 	{
-		openlog("test2", LOG_PID, LOG_DAEMON);
+		openlog("daemon3", LOG_PID, LOG_DAEMON);
 		while(1)
 		{
 			if (setjmp(jump) == 0)
 			{
 				if (advanced)
 					syslog(LOG_NOTICE, "Obudzenie sie %s", argv[1 + arguments]);
-				find_files("/", argv[1 + arguments]);
+				find_files("/", argv[1 + arguments], argc - arguments);
 			}
 			if (advanced)
 				syslog(LOG_NOTICE, "Uspienie sie");
