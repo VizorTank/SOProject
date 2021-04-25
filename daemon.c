@@ -117,11 +117,9 @@ void find_files(const char *path, const char *file, const int arg)
 
 int main(int argc, char **argv)
 {
-	/*
 	int d = daemon(0, 0);
 	if (d < 0)
 		printf("ERROR");
-	*/
 	if (argc < 2)
 	{
 		openlog("daemon6", LOG_PID, LOG_DAEMON);
