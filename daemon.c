@@ -80,16 +80,6 @@ void find_files(const char *path, const char *file, const int arg)
 	{
 		char *new_path = concat(path, entry->d_name);
 		if (lstat(new_path, &statbuf) == -1)
-		{
-			syslog(LOG_NOTICE, "ERROR %s", new_path);
-			continue;
-		}
-
-		if (advanced)
-			syslog(LOG_NOTICE, "Obsluzenie pliku/folderu %s  %s Typ: %d", path, entry->d_name, statbuf.st_mode);
-		
-		
-		if (S_ISLNK(statbuf.st_mode) || S_ISSOCK(statbuf.st_mode))
 			continue;
 		
 		if (S_ISDIR(statbuf.st_mode))
@@ -98,17 +88,20 @@ void find_files(const char *path, const char *file, const int arg)
 					|| !strcmp("..", entry->d_name))
 				continue;
 			
-			//syslog(LOG_NOTICE, "Folder: %s \n", entry->d_name);
+			if (advanced)
+				syslog(LOG_NOTICE, "Obsluzenie folderu %s", new_path);
 			
-			//syslog(LOG_NOTICE, "new path %s", new_path);
 			find_files(new_path, file, arg);
-			free(new_path);
 		}
 		else if (S_ISREG(statbuf.st_mode))
 		{
+			if (advanced)
+				syslog(LOG_NOTICE, "Obsluzenie pliku %s", new_path);
+			
 			if (strstr(entry->d_name, file) != NULL)
 				syslog(LOG_NOTICE, "Path: %s Plik: %s Wzorzec: %s\n", path, entry->d_name, file);
 		}
+		free(new_path);
 	}
 	
 	closedir(dir);
@@ -117,7 +110,11 @@ void find_files(const char *path, const char *file, const int arg)
 
 int main(int argc, char **argv)
 {
+	int sleep_time = 6000000;
+	int arguments = 0;
+	int forks = 0;
 	int d = daemon(0, 0);
+
 	if (d < 0)
 		printf("ERROR");
 	if (argc < 2)
@@ -127,10 +124,6 @@ int main(int argc, char **argv)
 		closelog();
 		return 0;
 	}
-	
-	int sleep_time = 6000000;
-	int arguments = 0;
-	int forks = 0;
 	
 	if (argc - arguments >= 3 && strstr(argv[1 + arguments], "-f") != NULL)
 	{
