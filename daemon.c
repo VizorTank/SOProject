@@ -78,9 +78,10 @@ void find_files(const char *path, const char *file, const int arg)
 	
 	while ((entry = readdir(dir)) != NULL)
 	{
-		if (lstat(entry->d_name, &statbuf) == -1)
+		char *new_path = concat(path, entry->d_name);
+		if (lstat(new_path, &statbuf) == -1)
 		{
-			syslog(LOG_NOTICE, "ERROR");
+			syslog(LOG_NOTICE, "ERROR %s", new_path);
 			continue;
 		}
 
@@ -98,7 +99,7 @@ void find_files(const char *path, const char *file, const int arg)
 				continue;
 			
 			//syslog(LOG_NOTICE, "Folder: %s \n", entry->d_name);
-			char *new_path = concat(path, entry->d_name);
+			
 			//syslog(LOG_NOTICE, "new path %s", new_path);
 			find_files(new_path, file, arg);
 			free(new_path);
