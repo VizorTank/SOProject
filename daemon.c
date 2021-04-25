@@ -78,10 +78,16 @@ void find_files(const char *path, const char *file, const int arg)
 	
 	while ((entry = readdir(dir)) != NULL)
 	{
-		if (advanced)
-			syslog(LOG_NOTICE, "Obsluzenie pliku/folderu %s  %s", path, entry->d_name);
+		if (!lstat(entry->d_name, &statbuf))
+		{
+			syslog(LOG_NOTICE, "ERROR");
+			return;
+		}
 		
-		lstat(entry->d_name, &statbuf);
+		if (advanced)
+			syslog(LOG_NOTICE, "Obsluzenie pliku/folderu %s  %s Typ: %d", path, entry->d_name, statbuf.st_mode);
+		
+		
 		if (S_ISLNK(statbuf.st_mode) || S_ISSOCK(statbuf.st_mode))
 			continue;
 		
