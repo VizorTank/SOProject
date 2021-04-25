@@ -124,7 +124,6 @@ int main(int argc, char **argv)
 	*/
 	if (argc < 2)
 	{
-		advanced = 1;
 		openlog("daemon6", LOG_PID, LOG_DAEMON);
 		find_files("/", "bc", argc);
 		closelog();
