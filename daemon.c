@@ -83,7 +83,7 @@ void find_files(const char *path, const char *file, const int arg)
 			syslog(LOG_NOTICE, "ERROR");
 			return;
 		}
-		
+
 		if (advanced)
 			syslog(LOG_NOTICE, "Obsluzenie pliku/folderu %s  %s Typ: %d", path, entry->d_name, statbuf.st_mode);
 		
@@ -122,7 +122,7 @@ int main(int argc, char **argv)
 	
 	if (argc < 2)
 	{
-		openlog("daemon5", LOG_PID, LOG_DAEMON);
+		openlog("daemon6", LOG_PID, LOG_DAEMON);
 		find_files("/", "bc", argc);
 		closelog();
 		return 0;
