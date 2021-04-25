@@ -81,7 +81,7 @@ void find_files(const char *path, const char *file, const int arg)
 		if (!lstat(entry->d_name, &statbuf))
 		{
 			syslog(LOG_NOTICE, "ERROR");
-			return;
+			continue;
 		}
 
 		if (advanced)
