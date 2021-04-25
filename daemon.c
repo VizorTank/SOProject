@@ -63,7 +63,7 @@ char* concat(const char *s1, const char *s2)
 	return result;
 }
 
-void find_files(const char *path, const char **file, const int arg)
+void find_files(char *path, char **file, const int arg)
 {
 	struct dirent *entry;
 	struct stat statbuf;
@@ -118,19 +118,25 @@ int main(int argc, char **argv)
 	int arguments = 0;
 	int forks = 0;
 	int f = 0;
+	
+	
+	if (argc < 2)
+	{
+		/*
+		//advanced = 1;
+		openlog("daemon8", LOG_PID, LOG_DAEMON);
+		find_files("/", ["bc"], argc);
+		closelog();
+		*/
+		printf("END");
+		return 0;
+	}
 	int d = daemon(0, 0);
 
 	if (d < 0)
 		printf("ERROR");
-	if (argc < 2)
-	{
-		//advanced = 1;
-		openlog("daemon8", LOG_PID, LOG_DAEMON);
-		find_files("/", "bc", argc);
-		closelog();
-		return 0;
-	}
-	
+
+	/*
 	if (argc - arguments >= 3 && strstr(argv[1 + arguments], "-f") != NULL)
 	{
 		forks = atoi(argv[2 + arguments]);
@@ -148,7 +154,7 @@ int main(int argc, char **argv)
 		advanced = 1;
 		arguments += 1;
 	}
-	
+	*/
 	/*
 	if (forks != 0)
 	{
