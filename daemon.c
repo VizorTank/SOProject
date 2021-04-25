@@ -117,6 +117,8 @@ int main(int argc, char **argv)
 	int sleep_time = 6000000;
 	int arguments = 0;
 	int forks = 0;
+	char dir[20] = "/";
+	char log[20] = "Daemon20";
 	int f = 0;
 	
 	if (argc < 2)
@@ -138,9 +140,21 @@ int main(int argc, char **argv)
 		printf("ERROR");
 	
 	// Argument handler
+	if (argc - arguments >= 3 && strstr(argv[1 + arguments], "-d") != NULL)
+	{
+		strcpy(dir, argv[2 + arguments]);
+		arguments += 2;
+	}
+
 	if (argc - arguments >= 3 && strstr(argv[1 + arguments], "-f") != NULL)
 	{
 		forks = atoi(argv[2 + arguments]);
+		arguments += 2;
+	}
+
+	if (argc - arguments >= 3 && strstr(argv[1 + arguments], "-l") != NULL)
+	{
+		strcpy(log, argv[2 + arguments]);
 		arguments += 2;
 	}
 	
@@ -191,7 +205,7 @@ int main(int argc, char **argv)
 	
 	if (f == 0)
 	{
-		openlog("daemon10", LOG_PID, LOG_DAEMON);
+		openlog(log, LOG_PID, LOG_DAEMON);
 		while(1)
 		{
 			int j;
