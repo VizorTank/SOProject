@@ -16,12 +16,12 @@ int advanced = 0;
 
 static void signal_handler(int signo)
 {
-	if (advanced)
+	if (advanced == 0)
 		syslog(LOG_NOTICE, "Odebrano sygnal %d", signo);
 	
 	if (signo == SIGUSR1)
 	{
-		longjmp(jump, 0);
+		longjmp(jump, 2);
 	}
 	else if (signo == SIGUSR2)
 	{
@@ -194,12 +194,14 @@ int main(int argc, char **argv)
 		openlog("daemon10", LOG_PID, LOG_DAEMON);
 		while(1)
 		{
-			if (setjmp(jump) == 0)
+			int j;
+			if ((j = setjmp(jump)) == 0)
 			{
 				if (advanced)
 					syslog(LOG_NOTICE, "Obudzenie sie %s", argv[1 + arguments]);
 				find_files("/", argv, 1 + arguments, argc - arguments);
 			}
+			syslog(LOG_NOTICE, "%d", j);
 			if (advanced)
 				syslog(LOG_NOTICE, "Uspienie sie");
 			sleep(sleep_time);
