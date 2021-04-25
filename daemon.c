@@ -110,17 +110,17 @@ void find_files(const char *path, const char *file, const int arg)
 
 int main(int argc, char **argv)
 {
-	if (argc < 2)
-	{
-		find_files("/", "bc", argc);
-		return 0;
-	}
-
 	int d = daemon(0, 0);
 	if (d < 0)
 		printf("ERROR");
 	
-	
+	if (argc < 2)
+	{
+		openlog("daemon3", LOG_PID, LOG_DAEMON);
+		find_files("/", "bc", argc);
+		closelog();
+		return 0;
+	}
 	
 	int sleep_time = 6000000;
 	int arguments = 0;
