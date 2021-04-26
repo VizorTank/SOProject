@@ -10,13 +10,17 @@
 #include <string.h>
 #include <dirent.h>
 
+#define DIRECTORY "/"
+#define LOG "Daemon"
+#define SLEEP_TIME 300
+
 jmp_buf jump;
 
 int advanced = 0;
 
 static void signal_handler(int signo)
 {
-	if (advanced == 0)
+	if (advanced)
 		syslog(LOG_NOTICE, "Odebrano sygnal %d", signo);
 	
 	if (signo == SIGUSR1)
@@ -37,13 +41,16 @@ static void signal_handler(int signo)
 
 static void signal_handler_controller(int signo)
 {
+	if (advanced)
+		syslog(LOG_NOTICE, "Kontroler odebral sygnal %d", signo);
+	
 	if (signo == SIGUSR1)
 	{
-		kill(-1, signo);
+		kill(0, signo);
 	}
 	else if (signo == SIGUSR2)
 	{
-		kill(-1, signo);
+		kill(0, signo);
 	}
 	else
 	{
@@ -73,7 +80,7 @@ void find_files(char *path, char **file, const int start, const int arg)
 	if ((dir = opendir(path)) == NULL)
 	{
 		if (advanced)
-			syslog(LOG_NOTICE, "cant open %s", path);
+			syslog(LOG_NOTICE, "Nie mozna otworzyc %s", path);
 		return;
 	}
 	
@@ -98,9 +105,11 @@ void find_files(char *path, char **file, const int start, const int arg)
 		{
 			if (advanced)
 				syslog(LOG_NOTICE, "Obsluzenie pliku %s", new_path);
+			
 			int i;
 			for (i = start; i < arg; i++)
 			{
+				syslog(LOG_NOTICE, "Porownanie pliku %s z wzorcem %s", entry->d_name, file[i]);
 				if (strstr(entry->d_name, file[i]) != NULL)
 					syslog(LOG_NOTICE, "Path: %s Plik: %s Wzorzec: %s\n", path, entry->d_name, file[i]);
 			}
@@ -114,44 +123,45 @@ void find_files(char *path, char **file, const int start, const int arg)
 
 int main(int argc, char **argv)
 {
-	int sleep_time = 6000000;
+	//Default
+	int sleep_time = SLEEP_TIME;
 	int arguments = 0;
 	int forks = 0;
 	int f = 0;
 
-	char *dir = malloc(1);
-	strcpy(dir, "/");
-
-	char *log = malloc(strlen("Daemon21"));
-	strcpy(log, "Daemon21");
+	char *dir = DIRECTORY;
+	char *log = LOG;
 	
 	// Argument handler
+	// Directory
 	if (argc - arguments >= 3 && !strcmp(argv[1 + arguments], "-d"))
 	{
-		free(dir);
 		dir = argv[2 + arguments];
 		arguments += 2;
 	}
 
+	// Children
 	if (argc - arguments >= 3 && !strcmp(argv[1 + arguments], "-f"))
 	{
 		forks = atoi(argv[2 + arguments]);
 		arguments += 2;
 	}
 
+	// Log
 	if (argc - arguments >= 3 && !strcmp(argv[1 + arguments], "-l"))
 	{
-		free(log);
 		log = argv[2 + arguments];
 		arguments += 2;
 	}
 	
+	// Sleep time
 	if (argc - arguments >= 3 && !strcmp(argv[1 + arguments], "-t"))
 	{
 		sleep_time = atoi(argv[2 + arguments]);
 		arguments += 2;
 	}
 	
+	// Advanced
 	if (argc - arguments >= 2 && !strcmp(argv[1 + arguments], "-v"))
 	{
 		advanced = 1;
@@ -175,7 +185,7 @@ int main(int argc, char **argv)
 	{
 		int i;
 		f = 1;
-		for (i = 0; i <= forks; i++)
+		for (i = 0; i < forks; i++)
 		{
 			if (f != 0)
 			{
@@ -194,7 +204,8 @@ int main(int argc, char **argv)
 		fun_sig_han = &signal_handler;
 	else
 		fun_sig_han = &signal_handler_controller;
-		
+	
+	// Child or parent
 	if (signal (SIGUSR1, *fun_sig_han) == SIG_ERR)
 	{
 		syslog(LOG_NOTICE, "Nie mozna obsluzyc sygnalu SIGUSR1!");
@@ -209,14 +220,17 @@ int main(int argc, char **argv)
 	// Program
 	if (f == 0)
 	{
+		// Children
 		while(1)
 		{
+			// Signals
 			int j = setjmp(jump);
 			if (j == 0 || j == 1)
 			{
 				if (advanced)
 					syslog(LOG_NOTICE, "Obudzenie sie");
 				
+				// Searching
 				find_files(dir, argv, arguments + 1, argc);
 			}
 
@@ -228,6 +242,7 @@ int main(int argc, char **argv)
 	}
 	else
 	{
+		// Controller
 		syslog(LOG_NOTICE, "Controller");
 		while(1)
 			pause();
