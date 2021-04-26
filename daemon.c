@@ -126,33 +126,33 @@ int main(int argc, char **argv)
 	strcpy(log, "Daemon21");
 	
 	// Argument handler
-	if (argc - arguments >= 3 && strcmp(argv[1 + arguments], "-d"))
+	if (argc - arguments >= 3 && !strcmp(argv[1 + arguments], "-d"))
 	{
 		free(dir);
 		dir = argv[2 + arguments];
 		arguments += 2;
 	}
 
-	if (argc - arguments >= 3 && strcmp(argv[1 + arguments], "-f"))
+	if (argc - arguments >= 3 && !strcmp(argv[1 + arguments], "-f"))
 	{
 		forks = atoi(argv[2 + arguments]);
 		arguments += 2;
 	}
 
-	if (argc - arguments >= 3 && strcmp(argv[1 + arguments], "-l"))
+	if (argc - arguments >= 3 && !strcmp(argv[1 + arguments], "-l"))
 	{
 		free(log);
 		log = argv[2 + arguments];
 		arguments += 2;
 	}
 	
-	if (argc - arguments >= 3 && strcmp(argv[1 + arguments], "-t"))
+	if (argc - arguments >= 3 && !strcmp(argv[1 + arguments], "-t"))
 	{
 		sleep_time = atoi(argv[2 + arguments]);
 		arguments += 2;
 	}
 	
-	if (argc - arguments >= 2 && strcmp(argv[1 + arguments], "-v"))
+	if (argc - arguments >= 2 && !strcmp(argv[1 + arguments], "-v"))
 	{
 		advanced = 1;
 		arguments += 1;
@@ -161,6 +161,7 @@ int main(int argc, char **argv)
 	// Too few arguments
 	if (argc - arguments <= 1)
 	{
+		fprintf(stderr, "Wrong arg");
 		exit (EXIT_FAILURE);
 	}
 	
@@ -184,7 +185,9 @@ int main(int argc, char **argv)
 				break;
 		}
 	}
-	
+
+	openlog(log, LOG_PID, LOG_DAEMON);
+
 	// Signal handlers
 	void (*fun_sig_han)(int);
 	if (f == 0)
@@ -194,17 +197,16 @@ int main(int argc, char **argv)
 		
 	if (signal (SIGUSR1, *fun_sig_han) == SIG_ERR)
 	{
-		fprintf(stderr, "Nie mozna obsluzyc sygnalu SIGUSR1!");
+		syslog(LOG_NOTICE, "Nie mozna obsluzyc sygnalu SIGUSR1!");
 		exit (EXIT_FAILURE);
 	}
 	if (signal (SIGUSR2, *fun_sig_han) == SIG_ERR)
 	{
-		fprintf(stderr, "Nie mozna obsluzyc sygnalu SIGUSR2!");
+		syslog(LOG_NOTICE, "Nie mozna obsluzyc sygnalu SIGUSR2!");
 		exit (EXIT_FAILURE);
 	}
 	
 	// Program
-	openlog(log, LOG_PID, LOG_DAEMON);
 	if (f == 0)
 	{
 		while(1)
@@ -213,7 +215,7 @@ int main(int argc, char **argv)
 			if (j == 0 || j == 1)
 			{
 				if (advanced)
-					syslog(LOG_NOTICE, "Obudzenie sie %s", argv[1 + arguments]);
+					syslog(LOG_NOTICE, "Obudzenie sie");
 				
 				find_files(dir, argv, arguments + 1, argc);
 			}
@@ -227,7 +229,8 @@ int main(int argc, char **argv)
 	else
 	{
 		syslog(LOG_NOTICE, "Controller");
-		while(1);
+		while(1)
+			pause();
 	}
 	closelog();
 	return EXIT_SUCCESS;
