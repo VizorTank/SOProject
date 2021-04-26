@@ -126,35 +126,33 @@ int main(int argc, char **argv)
 	strcpy(log, "Daemon21");
 	
 	// Argument handler
-	if (argc - arguments >= 3 && strstr(argv[1 + arguments], "-d") != NULL)
+	if (argc - arguments >= 3 && strcmp(argv[1 + arguments], "-d"))
 	{
 		free(dir);
-		dir = malloc(strlen(argv[2 + arguments]));
-		strcpy(dir, argv[2 + arguments]);
+		dir = argv[2 + arguments];
 		arguments += 2;
 	}
 
-	if (argc - arguments >= 3 && strstr(argv[1 + arguments], "-f") != NULL)
+	if (argc - arguments >= 3 && strcmp(argv[1 + arguments], "-f"))
 	{
 		forks = atoi(argv[2 + arguments]);
 		arguments += 2;
 	}
 
-	if (argc - arguments >= 3 && strstr(argv[1 + arguments], "-l") != NULL)
+	if (argc - arguments >= 3 && strcmp(argv[1 + arguments], "-l"))
 	{
 		free(log);
-		log = malloc(strlen(argv[2 + arguments]));
-		strcpy(log, argv[2 + arguments]);
+		log = argv[2 + arguments];
 		arguments += 2;
 	}
 	
-	if (argc - arguments >= 3 && strstr(argv[1 + arguments], "-t") != NULL)
+	if (argc - arguments >= 3 && strcmp(argv[1 + arguments], "-t"))
 	{
 		sleep_time = atoi(argv[2 + arguments]);
 		arguments += 2;
 	}
 	
-	if (argc - arguments >= 2 && strstr(argv[1 + arguments], "-v") != NULL)
+	if (argc - arguments >= 2 && strcmp(argv[1 + arguments], "-v"))
 	{
 		advanced = 1;
 		arguments += 1;
@@ -206,9 +204,9 @@ int main(int argc, char **argv)
 	}
 	
 	// Program
+	openlog(log, LOG_PID, LOG_DAEMON);
 	if (f == 0)
 	{
-		openlog(log, LOG_PID, LOG_DAEMON);
 		while(1)
 		{
 			int j = setjmp(jump);
@@ -217,7 +215,7 @@ int main(int argc, char **argv)
 				if (advanced)
 					syslog(LOG_NOTICE, "Obudzenie sie %s", argv[1 + arguments]);
 				
-				find_files(dir, argv, 1 + arguments, argc - arguments);
+				find_files(dir, argv, arguments + 1, argc);
 			}
 
 			if (advanced)
@@ -225,13 +223,12 @@ int main(int argc, char **argv)
 			
 			sleep(sleep_time);
 		}
-		closelog();
 	}
 	else
 	{
 		syslog(LOG_NOTICE, "Controller");
 		while(1);
 	}
-	
+	closelog();
 	return EXIT_SUCCESS;
 }
