@@ -17,9 +17,12 @@
 jmp_buf jump;
 
 int advanced = 0;
+int gid;
 
 static void signal_handler(int signo)
 {
+	// Normal signal handler
+	
 	if (advanced)
 		syslog(LOG_NOTICE, "Odebrano sygnal %d", signo);
 	
@@ -41,27 +44,30 @@ static void signal_handler(int signo)
 
 static void signal_handler_controller(int signo)
 {
+	// Signal handler for controller
+
 	if (advanced)
 		syslog(LOG_NOTICE, "Kontroler odebral sygnal %d", signo);
 	
 	if (signo == SIGUSR1)
 	{
-		kill(0, signo);
+		kill (-gid, signo);
 	}
 	else if (signo == SIGUSR2)
 	{
-		kill(0, signo);
+		kill (-gid, signo);
 	}
 	else
 	{
 		syslog(LOG_NOTICE, "Nieoczekiwany sygnal!");
 		exit (EXIT_FAILURE);
 	}
-	exit (EXIT_SUCCESS);
 }
 
 char* concat(const char *s1, const char *s2)
 {
+	// Merge path
+
 	char *result = malloc(strlen(s1) + strlen(s2) + 2);
 	strcpy(result, s1);
 	if (strcmp(s1, "/") != 0)
@@ -72,11 +78,14 @@ char* concat(const char *s1, const char *s2)
 
 void find_files(char *path, char **file, const int start, const int arg)
 {
+	// Search through directory
+
 	struct dirent *entry;
 	struct stat statbuf;
 	int ret = 1;
 	DIR *dir;
 	
+	// Error opening directory
 	if ((dir = opendir(path)) == NULL)
 	{
 		if (advanced)
@@ -86,7 +95,10 @@ void find_files(char *path, char **file, const int start, const int arg)
 	
 	while ((entry = readdir(dir)) != NULL)
 	{
+		// Directory handler
+
 		char *new_path = concat(path, entry->d_name);
+		// Error checking stats
 		if (lstat(new_path, &statbuf) == -1)
 			continue;
 		
@@ -99,24 +111,31 @@ void find_files(char *path, char **file, const int start, const int arg)
 			if (advanced)
 				syslog(LOG_NOTICE, "Obsluzenie folderu %s", new_path);
 			
+			// Recursive search
 			find_files(new_path, file, start, arg);
 		}
 		else if (S_ISREG(statbuf.st_mode))
 		{
+			// File Handler
+			
 			if (advanced)
 				syslog(LOG_NOTICE, "Obsluzenie pliku %s", new_path);
 			
+			// Loop through patterns
 			int i;
 			for (i = start; i < arg; i++)
 			{
-				syslog(LOG_NOTICE, "Porownanie pliku %s z wzorcem %s", entry->d_name, file[i]);
+				if (advanced)
+					syslog(LOG_NOTICE, "Porownanie pliku %s z wzorcem %s", entry->d_name, file[i]);
+
+				// Check pattern
 				if (strstr(entry->d_name, file[i]) != NULL)
 					syslog(LOG_NOTICE, "Path: %s Plik: %s Wzorzec: %s\n", path, entry->d_name, file[i]);
 			}
 		}
 		free(new_path);
 	}
-	
+	// close directory
 	closedir(dir);
 	return;
 }
@@ -184,15 +203,16 @@ int main(int argc, char **argv)
 	if (forks != 0)
 	{
 		int i;
-		f = 1;
 		for (i = 0; i < forks; i++)
 		{
-			if (f != 0)
-			{
-				f = fork();
-			}
-			else
+			f = fork();
+			if (f == 0)
 				break;
+			
+			if (i == 0)
+				gid = f;
+			
+			setpgid(f, gid);
 		}
 	}
 
@@ -247,6 +267,7 @@ int main(int argc, char **argv)
 		while(1)
 			pause();
 	}
+
 	closelog();
 	return EXIT_SUCCESS;
 }
