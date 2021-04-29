@@ -190,8 +190,8 @@ int main(int argc, char **argv)
 	// Too few arguments
 	if (argc - arguments <= 1)
 	{
-		fprintf(stderr, "Poprawne uzycie komendy");
-		fprintf(stderr, "%s [-d folder] [-f liczba_dzieci] [-l logi] [-t czas] [-v] wzorzec [wzorce ...]");
+		fprintf(stderr, "Poprawne uzycie komendy\n");
+		fprintf(stderr, "%s [-d folder] [-f liczba_dzieci] [-l logi] [-t czas] [-v] wzorzec [wzorce ...]\n", argv[0]);
 		exit (EXIT_FAILURE);
 	}
 	
