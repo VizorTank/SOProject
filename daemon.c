@@ -14,7 +14,7 @@
 #define LOG "Daemon"
 #define SLEEP_TIME 300
 
-jmp_buf jump;
+sigjmp_buf jump;
 
 int advanced = 0;
 int gid;
@@ -28,11 +28,11 @@ static void signal_handler(int signo)
 	
 	if (signo == SIGUSR1)
 	{
-		longjmp(jump, 1);
+		siglongjmp(jump, 1);
 	}
 	else if (signo == SIGUSR2)
 	{
-		longjmp(jump, 2);
+		siglongjmp(jump, 2);
 	}
 	else
 	{
@@ -190,7 +190,8 @@ int main(int argc, char **argv)
 	// Too few arguments
 	if (argc - arguments <= 1)
 	{
-		fprintf(stderr, "Wrong arg");
+		fprintf(stderr, "Poprawne uzycie komendy");
+		fprintf(stderr, "%s [-d folder] [-f liczba_dzieci] [-l logi] [-t czas] [-v] wzorzec [wzorce ...]");
 		exit (EXIT_FAILURE);
 	}
 	
@@ -244,7 +245,7 @@ int main(int argc, char **argv)
 		while(1)
 		{
 			// Signals
-			int j = setjmp(jump);
+			int j = sigsetjmp(jump, 1);
 			if (j == 0 || j == 1)
 			{
 				if (advanced)
